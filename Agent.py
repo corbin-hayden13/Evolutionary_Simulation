@@ -5,7 +5,7 @@ import RigidBody as rb
 
 
 class Agent:
-    def __init__(self, rgb_color, mass, energy, sight_dist):
+    def __init__(self, rgb_color, mass, energy, sight_dist, reproduction_factor):
         self.rigid_body = None
         self.rgb_color = list(rgb_color)
         self.mass = mass
@@ -15,9 +15,11 @@ class Agent:
         self.sight_dist = sight_dist  # this is the range an agent can look
         self.sight_arc = math.floor(5 * 70 / math.log(sight_dist))  # In degrees, arbitrarily chose 5 * 30
         self.is_controllable = False
+        self.desire_to_reproduce = reproduction_factor
+        # Possibly gene for how many children are created when reproducing?
 
-        print(self.sight_arc)
-        print(self.sight_dist)
+        # Easier way of creating random mutations in agents for later algorithm
+        self.gene_sequece = [self.rgb_color, self.mass, self.energy, self.sight_dist]
 
     def set_rigid_body(self, rigid_body):
         self.rigid_body = rigid_body
