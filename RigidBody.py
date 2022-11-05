@@ -4,7 +4,7 @@ import math
 
 """ TODO - Want to rework xy_velocity to one speed vector, add an angular attribute """
 class RigidBody:
-    def __init__(self, mass, xy_pos, wh_size, xy_velocity, xy_accel, bouncy=False):
+    def __init__(self, mass, xy_pos, wh_size, xy_velocity, accel, bouncy=False):
         self.mass = int(mass)
         self.angle = 0
         # must represent center because top_left corner will rotate!!
@@ -13,7 +13,7 @@ class RigidBody:
         self.wh_size[0] *= self.mass / 10
         self.wh_size[1] *= self.mass / 10
         self.xy_velocity = list(xy_velocity)
-        self.xy_accel = list(xy_accel)
+        self.accel = accel
         self.bouncy = bool(bouncy)
         # pos_x, neg_x, pos_y, neg_y
         self.collision = [0, 0, 0, 0]
@@ -27,16 +27,19 @@ class RigidBody:
         self.xy_pos[1] += self.xy_velocity[1]
 
     def accelerate(self):
-        self.xy_velocity[0] += self.xy_accel[0]
-        self.xy_velocity[1] += self.xy_accel[1]
+        self.xy_velocity[0] += self.calc_xy_accel()[0]
+        self.xy_velocity[1] += self.calc_xy_accel()[1]
 
-    def calc_xy_accel(self, base_accel, rotation):
-        return [base_accel * math.cos(rotation), base_accel * math.sin(rotation)]
+    def calc_xy_accel(self):
+        return [self.accel * math.cos(self.angle * math.pi/180), self.accel * math.sin(self.angle * math.pi/180)]
 
-    def get_rotation_angle(self):
+    def get_rotation_angle(self, x_comp, y_comp):
         rot_offset = 90
-        x_comp = self.xy_velocity[0]
-        y_comp = -1 * self.xy_velocity[1]
+        if y_comp == 0:
+            if x_comp > 0:
+                return -rot_offset
+            if x_comp < 0:
+                return 180 - rot_offset
 
         if x_comp == 0:
             if y_comp > 0:
@@ -44,23 +47,22 @@ class RigidBody:
             if y_comp < 0:
                 return 270 - rot_offset
             if y_comp == 0:
-                return 0 - rot_offset
+                return -rot_offset  # 0 - rot_offset
 
         angle = math.atan((y_comp/x_comp))
 
         if x_comp > 0 and y_comp < 0:
-            return angle * (180/math.pi) - rot_offset + 360
+            return (angle * 180/math.pi) - rot_offset + 360
 
         if x_comp < 0:
-            return angle * (180/math.pi) - rot_offset + 180
+            return (angle * 180/math.pi) - rot_offset + 180
 
-        if y_comp == 0:
-            if x_comp > 0:
-                return 0 - rot_offset
-            if x_comp < 0:
-                return 180 - rot_offset
+        return (angle * 180/math.pi) - rot_offset
 
-        return angle * (180/math.pi) - rot_offset
+    def get_angle_facing(self):
+        x_comp = self.xy_velocity[0]
+        y_comp = -1 * self.xy_velocity[1]
+        return self.get_rotation_angle(x_comp, y_comp)
 
     def rotate_to(self, degrees, pivot_offset_from_center):
         # pos: Where on the screen the pivot (center) is
@@ -108,8 +110,7 @@ class RigidBody:
             else:
                 self.xy_velocity[1] += friction_accel
         
-    def check_collide_bounds(self, origin, width_height, x_pass_through=False,
-                             y_pass_through=False):
+    def check_collide_bounds(self, origin, width_height, x_pass_through=False, y_pass_through=False):
         self.collision = [0, 0, 0, 0]  # Acts as a list of flags, could be useful later on
         """ Cannot use self.body_rect.center for offset because it becomes the xy_pos after first call to rotate_to """
         # when colliding with right of screen
@@ -174,14 +175,4 @@ class RigidBody:
         # self right -> other top
         if self.xy_pos[0] + self.body_rect.width / 2 >= other.xy_pos[0] + other.body_rect.width / 2:
             collision[0] = 1
-
-
-def add_angles(angle1, angle2):
-    temp_angle = angle1 + angle2
-    if temp_angle >= 360:
-        return temp_angle - 360
-    if temp_angle < 0:
-        return temp_angle + 360
-
-    return temp_angle
 

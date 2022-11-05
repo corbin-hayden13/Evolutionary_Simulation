@@ -13,13 +13,15 @@ class Agent:
         self.wants_to_move = False
         self.energy = energy
         self.sight_dist = sight_dist  # this is the range an agent can look
-        self.sight_arc = math.floor(5 * 30 / math.log(sight_dist))  # In degrees, arbitrarily chose 5 * 30
+        self.sight_arc = math.floor(5 * 70 / math.log(sight_dist))  # In degrees, arbitrarily chose 5 * 30
         self.is_controllable = False
 
         print(self.sight_arc)
+        print(self.sight_dist)
 
     def set_rigid_body(self, rigid_body):
         self.rigid_body = rigid_body
+        self.rigid_body.accel = self.strength
         self.rigid_body.body_surface.fill(self.rgb_color)
         self.rigid_body.rgb_color = self.rgb_color
 
@@ -30,7 +32,7 @@ class Agent:
 
         self.rigid_body.accelerate()
         self.rigid_body.step()
-        accel = 1
+        accel = 1  # Friction coefficient
 
         self.rigid_body.apply_vertical_friction(accel)
         self.rigid_body.apply_horizontal_friction(accel)
@@ -50,7 +52,7 @@ class Agent:
             self.wants_to_move = True
             if self.wants_to_move and self.energy != 0:
                 rotation = rand.randint(0, 359)
-                self.rigid_body.xy_accel = self.rigid_body.calc_xy_accel(self.strength, rotation)
+                self.rigid_body.angle = rotation  # Potentially add offset here
                 self.step(origin, surface, xy_pass_through)
                 self.energy -= self.calc_energy_cost(True)
 

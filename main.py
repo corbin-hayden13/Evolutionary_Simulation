@@ -22,24 +22,16 @@ def draw_agent(surface, agent, food_list):
     # To make the agent "remember" the direction it was facing when moving
     agent.rigid_body.angle = (agent.rigid_body.angle if (agent.rigid_body.xy_velocity[0] == 0
                                                          and agent.rigid_body.xy_velocity[1] == 0)
-                              else agent.rigid_body.get_rotation_angle())
+                              else agent.rigid_body.get_angle_facing())
     # Get rotated surface from the rotate_to() RigidBody method
     rotated_surface = agent.rigid_body.rotate_to(agent.rigid_body.angle, [0, 0])
     # Draw a small black head to visually represent the front of the agent
     pg.draw.rect(agent.rigid_body.body_surface, [0, 0, 0], agent.rigid_body.head)
     surface.blit(rotated_surface[0], rotated_surface[1])
+    # Used for drawing the bounding rectangle of the agent
     # dpg.draw.rect(surface, [255, 0, 0], agent.rigid_body.body_rect)
     pg.draw.circle(surface, [255, 255, 0], agent.rigid_body.xy_pos, 1)
     pg.draw.line(surface, [255, 255, 255], agent.rigid_body.xy_pos, ai.look(surface, agent, food_list))
-    left_line_angle = rb.add_angles(agent.rigid_body.angle, -1 * (agent.sight_arc // 2))
-    right_line_angle = rb.add_angles(agent.rigid_body.angle, (agent.sight_arc // 2))
-    """
-    pg.draw.line(surface, [50, 255, 200], agent.rigid_body.xy_pos,
-                 [agent.rigid_body.xy_pos[0] + (50 * math.cos(left_line_angle)),
-                  agent.rigid_body.xy_pos[1] + (50 * math.sin(left_line_angle))])
-    pg.draw.line(surface, [50, 255, 200], agent.rigid_body.xy_pos,
-                 [agent.rigid_body.xy_pos[0] + (50 * math.cos(right_line_angle)),
-                  agent.rigid_body.xy_pos[1] + (50 * math.sin(right_line_angle))])"""
 
 
 def draw_food(surface, food):
@@ -48,14 +40,16 @@ def draw_food(surface, food):
 
 
 def main():
-    SURFACE_WH = [960, 540]
-    # SURFACE_WH = [1920, 1080]
+    # SURFACE_WH = [960, 540]
+    SURFACE_WH = [1920, 1080]
     LIGHT_GREY = [166, 166, 166]
     FPS = 60
     Y_ACCEL = 3  # Global accel used for x_accel and y_accel for the moment
     X_ACCEL = 3
-    NUM_AGENTS = 1
-    STARTING_FOOD = 1
+    NUM_AGENTS = 20
+    STARTING_FOOD = 50
+
+    MAX_SIGHT_DIST = 200  # Takes a big performance hit if this distance is set any higher
 
     """ Start by creating the pygame screen """
     screen = init_pygame(SURFACE_WH, LIGHT_GREY)
@@ -65,7 +59,7 @@ def main():
     agent_list = []
     for a in range(NUM_AGENTS):
         agent_list.append(Agent.Agent([rand.randint(0, 255), rand.randint(0, 255), rand.randint(0, 255)],
-                                      rand.randint(5, 20), 100, rand.randint(100, 200)))
+                                      rand.randint(5, 20), 100, rand.randint(100, MAX_SIGHT_DIST)))
         agent_list[a].set_rigid_body(rb.RigidBody(agent_list[a].mass, [SURFACE_WH[0] // 2, SURFACE_WH[1] // 2], [10, 40],
                                                   # [rand.randint(-10, 10), rand.randint(-10, 10)],
                                                   [0, 0], [0, 0], True))
@@ -83,12 +77,12 @@ def main():
                                                  [food_list[b].size*2, food_list[b].size*2], [0, 0], [0, 0]))
 
     # This is the one player-controllable agent for playing with
-    agent_list[0].is_controllable = True
+    agent_list[0].is_controllable = False
 
     """ Some booleans to define if the game should be running, if agents can be controlled, and other control flags """
     running = True
     jumped = False  # Implement better jumping mechanics later
-    in_control = True
+    in_control = False
     prev_b_down = False
 
     """ Main Game Loop """
@@ -99,7 +93,7 @@ def main():
 
         # For every current agent, let's calculate the movement behavior then draw them to the screen
         for agent in agent_list:
-            agent.wander([0, 0], screen, [False, False])
+            ai.seek_food(screen, agent, food_list)
             draw_agent(screen, agent, food_list)  # food_list for testing ai.look()
 
         # Redraw food particles, later respawn more particles based on cooldown
